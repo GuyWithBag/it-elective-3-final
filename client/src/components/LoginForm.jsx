@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 const defaultValues = {
-  username: '',
-  password: '',
+  username: "",
+  password: "",
 };
 
 function LoginForm({ onSubmit, loading, error }) {
-  const [values, setValues] = useState({ username: '', password: '' });
+  const [values, setValues] = useState({ username: "", password: "" });
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -34,7 +34,7 @@ function LoginForm({ onSubmit, loading, error }) {
         onChange={handleChange}
         placeholder="admin"
         autoComplete="username"
-        className="py-2.5 px-3 rounded-[10px] border border-gray-300 bg-gray-50 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/15"
+        className="py-2.5 px-3 rounded-[10px] border border-gray-300 bg-white focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-blue-600/15"
         required
       />
       <label htmlFor="password" className="font-semibold text-[0.95rem]">
@@ -48,18 +48,20 @@ function LoginForm({ onSubmit, loading, error }) {
         onChange={handleChange}
         placeholder="••••••••"
         autoComplete="current-password"
-        className="py-2.5 px-3 rounded-[10px] border border-gray-300 bg-gray-50 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/15"
+        className="py-2.5 px-3 rounded-[10px] border border-gray-300 bg-white focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-blue-600/15"
         required
       />
       {error && (
-        <p className="bg-red-100 text-red-800 py-2 px-3 rounded-[10px]">{error}</p>
+        <p className="bg-red-100 text-red-800 py-2 px-3 rounded-[10px]">
+          {error}
+        </p>
       )}
       <button
         type="submit"
         disabled={loading}
-        className="py-2.5 px-4 rounded-full border-0 bg-blue-600 text-white font-semibold cursor-pointer transition-colors duration-200 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+        className="py-2.5 px-4 rounded-full border-0 bg-red-400 text-white font-semibold cursor-pointer transition-colors duration-200 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        {loading ? 'Signing in…' : 'Login'}
+        {loading ? "Signing in…" : "Login"}
       </button>
     </form>
   );

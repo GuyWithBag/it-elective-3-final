@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 const emptyState = {
-  item_name: '',
-  category: '',
-  stock_qty: '',
-  unit_price: '',
+  item_name: "",
+  category: "",
+  stock_qty: "",
+  unit_price: "",
 };
 
 function ItemForm({
@@ -17,7 +17,7 @@ function ItemForm({
   resetAfterSubmit = false,
 }) {
   const [values, setValues] = useState(initialValues);
-  const inputPrefix = title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const inputPrefix = title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   const makeId = (suffix) => `${inputPrefix}-${suffix}`;
 
   useEffect(() => {
@@ -48,75 +48,79 @@ function ItemForm({
         {onCancel && (
           <button
             type="button"
-            className="border border-[#cbd5f5] bg-transparent text-gray-800 rounded-full py-1.5 px-3.5 font-semibold cursor-pointer transition-colors duration-200 hover:bg-gray-50"
+            className="border border-[#cbd5f5] bg-transparent text-gray-800 rounded-full py-1.5 px-3.5 font-semibold cursor-pointer transition-colors duration-200 hover:bg-white"
             onClick={onCancel}
           >
             Cancel
           </button>
         )}
       </div>
-      <label htmlFor={makeId('item-name')} className="font-semibold text-[0.95rem]">
+      <label
+        htmlFor={makeId("item-name")}
+        className="font-semibold text-[0.95rem]"
+      >
         Item name
       </label>
       <input
-        id={makeId('item-name')}
+        id={makeId("item-name")}
         name="item_name"
         value={values.item_name}
         onChange={handleChange}
         placeholder="Device name"
-        className="py-2.5 px-3 rounded-[10px] border border-gray-300 bg-gray-50 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/15"
+        className="py-2.5 px-3 rounded-[10px] border border-gray-300 bg-white focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-blue-600/15"
         required
       />
-      <label htmlFor={makeId('category')} className="font-semibold text-[0.95rem]">
+      <label
+        htmlFor={makeId("category")}
+        className="font-semibold text-[0.95rem]"
+      >
         Category
       </label>
       <input
-        id={makeId('category')}
+        id={makeId("category")}
         name="category"
         value={values.category}
         onChange={handleChange}
         placeholder="Laptop, Accessories..."
-        className="py-2.5 px-3 rounded-[10px] border border-gray-300 bg-gray-50 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/15"
+        className="py-2.5 px-3 rounded-[10px] border border-gray-300 bg-white focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-blue-600/15"
         required
       />
-      <label htmlFor={makeId('stock')} className="font-semibold text-[0.95rem]">
+      <label htmlFor={makeId("stock")} className="font-semibold text-[0.95rem]">
         Stock quantity
       </label>
       <input
-        id={makeId('stock')}
+        id={makeId("stock")}
         name="stock_qty"
         type="number"
         min="0"
         value={values.stock_qty}
         onChange={handleChange}
-        className="py-2.5 px-3 rounded-[10px] border border-gray-300 bg-gray-50 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/15"
+        className="py-2.5 px-3 rounded-[10px] border border-gray-300 bg-white focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-blue-600/15"
         required
       />
-      <label htmlFor={makeId('price')} className="font-semibold text-[0.95rem]">
+      <label htmlFor={makeId("price")} className="font-semibold text-[0.95rem]">
         Unit price
       </label>
       <input
-        id={makeId('price')}
+        id={makeId("price")}
         name="unit_price"
         type="number"
         min="0"
         step="0.01"
         value={values.unit_price}
         onChange={handleChange}
-        className="py-2.5 px-3 rounded-[10px] border border-gray-300 bg-gray-50 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/15"
+        className="py-2.5 px-3 rounded-[10px] border border-gray-300 bg-white focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-blue-600/15"
         required
       />
       <button
         type="submit"
         disabled={disabled}
-        className="py-2.5 px-4 rounded-full border-0 bg-blue-600 text-white font-semibold cursor-pointer transition-colors duration-200 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+        className="py-2.5 px-4 rounded-full border-0 bg-red-400 text-white font-semibold cursor-pointer transition-colors duration-200 hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        {disabled ? 'Saving…' : submitLabel}
+        {disabled ? "Saving…" : submitLabel}
       </button>
     </form>
   );
 }
 
 export default ItemForm;
-
-

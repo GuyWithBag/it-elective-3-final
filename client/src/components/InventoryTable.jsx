@@ -56,7 +56,7 @@ function InventoryTable({ items, loading, canEdit, onEdit }) {
                 <td className="text-left py-3 px-2.5 border-b border-indigo-100">
                   <button
                     type="button"
-                    className="border border-[#cbd5f5] bg-transparent text-gray-800 rounded-full py-1.5 px-3.5 font-semibold cursor-pointer transition-colors duration-200 hover:bg-gray-50"
+                    className="border border-[#cbd5f5] bg-transparent text-gray-800 rounded-full py-1.5 px-3.5 font-semibold cursor-pointer transition-colors duration-200 hover:bg-white"
                     onClick={() => onEdit(item)}
                   >
                     Edit
@@ -72,5 +72,3 @@ function InventoryTable({ items, loading, canEdit, onEdit }) {
 }
 
 export default InventoryTable;
-
-
