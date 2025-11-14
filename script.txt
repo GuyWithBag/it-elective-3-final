@@ -1,0 +1,633 @@
+# Inventory Access Portal - How It Works
+
+## Overview
+This is a web application for managing inventory items. Think of it like an online spreadsheet where you can view items, and if you're an admin, you can add or edit them.
+
+---
+
+## The Three Main Parts
+
+### 1. **Frontend (What You See)**
+The frontend is the part you interact with in your web browser. It's built with React, which is a JavaScript library that makes websites interactive.
+
+**What it includes:**
+- Login page where you enter your username and password
+- Dashboard showing all inventory items in a table
+- Forms to add new items or edit existing ones (only if you're an admin)
+- Buttons like "Refresh", "Edit", "Log out"
+
+**How it works:**
+- When you click a button or type in a form, React updates what you see instantly
+- It talks to the backend to get or send data
+- It remembers who you are while you're using the app
+
+---
+
+### 2. **Backend (The Middleman)**
+The backend is a server running on Node.js (JavaScript on the server). It's like a guard that checks permissions and handles all the requests from the frontend.
+
+**What it does:**
+- Checks if your username and password are correct
+- Makes sure only admins can add or edit items
+- Talks to the database to get or save information
+- Keeps track of who's logged in using "sessions"
+
+**The API endpoints (routes):**
+- `POST /api/auth/login` - Log in with username and password
+- `POST /api/auth/logout` - Log out
+- `GET /api/auth/me` - Check if you're still logged in
+- `GET /api/items` - Get all inventory items
+- `POST /api/items` - Add a new item (admin only)
+- `PUT /api/items/:id` - Update an item (admin only)
+
+---
+
+### 3. **Database (Where Data Lives)**
+The database is MySQL, which stores all your data in organized tables. Think of it like Excel tables, but much more powerful.
+
+**Tables:**
+1. **users table** - Stores usernames, passwords, and roles (admin or regular user)
+2. **items table** - Stores inventory items with these columns:
+   - id (unique number for each item)
+   - item_name (like "Dell Laptop")
+   - category (like "Computers")
+   - stock_qty (how many you have)
+   - unit_price (price per item)
+
+---
+
+## How Login Works (Step by Step)
+
+Let's walk through what happens when you try to log in:
+
+### Step 1: You Enter Your Credentials
+**File: `frontend/src/components/LoginForm.jsx`**
+
+- You type your username (like "admin") and password on the login page
+- You click the "Login" button
+- The `handleSubmit` function in LoginForm.jsx captures your input
+- It calls the `onSubmit` prop, which is actually the `handleLogin` function from App.jsx
+
+### Step 2: Frontend Sends Request
+**File: `frontend/src/App.jsx` (handleLogin function)**
+
+```javascript
+const handleLogin = async (credentials) => {
+  const response = await fetch(`${API_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(credentials),
+  });
+  // ...
+}
+```
+
+- The React app takes your username and password
+- It sends them to the backend at `http://localhost:4000/api/auth/login`
+- This is done using a "POST" request (sending data to the server)
+- `credentials: 'include'` means it will send/receive cookies
+
+### Step 3: Backend Checks the Database
+**File: `backend/server.js` (or `backend/routes/auth.js`)**
+
+```javascript
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+  // Query the database for this user
+  const query = 'SELECT * FROM users WHERE username = ?';
+  // Check if password matches
+  // ...
+});
+```
+
+- The backend receives your username and password
+- It looks in the MySQL database's "users" table
+- It checks if a user with that username exists
+- It compares the password you entered with the stored password
+  - **Important:** Passwords should be "hashed" (encrypted) in the database for security
+
+### Step 4: Creating a Session
+**File: `backend/server.js` (session configuration)**
+
+```javascript
+app.use(session({
+  secret: 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false, httpOnly: true }
+}));
+```
+
+If the username and password match:
+- The backend creates a "session" - think of it like a temporary ID card
+- This session is stored on the server (in memory or a session store)
+- A "cookie" (small piece of data) is sent back to your browser
+- This cookie proves you're logged in
+- The session stores your user info: `req.session.user = { id, username, role }`
+
+### Step 5: Frontend Updates
+**File: `frontend/src/App.jsx` (handleLogin function continued)**
+
+```javascript
+const data = await response.json();
+setUser(data.user);
+navigate('/app', { replace: true });
+```
+
+- Your browser receives the response saying "login successful"
+- The React app stores your user information (username, role) in state
+- You're automatically redirected to the dashboard page
+- Now you can see the inventory items!
+
+### Step 6: Staying Logged In
+**File: `frontend/src/App.jsx` (useEffect with verifySession)**
+
+```javascript
+useEffect(() => {
+  const verifySession = async () => {
+    const response = await fetch(`${API_URL}/api/auth/me`, {
+      credentials: 'include',
+    });
+    if (response.ok) {
+      const data = await response.json();
+      setUser(data.user);
+    }
+  };
+  verifySession();
+}, []);
+```
+
+**File: `backend/server.js` (GET /api/auth/me route)**
+
+```javascript
+app.get('/api/auth/me', (req, res) => {
+  if (req.session.user) {
+    res.json({ user: req.session.user });
+  } else {
+    res.status(401).json({ error: 'Not authenticated' });
+  }
+});
+```
+
+- Every time your browser talks to the backend, it sends that cookie
+- The backend checks: "Does this cookie match a valid session?"
+- If yes, it knows who you are and what permissions you have
+- If no (or if you logged out), it sends you back to the login page
+
+---
+
+## How Viewing Items Works
+
+### When You're on the Dashboard:
+
+**Step 1: Component Loads**
+**File: `frontend/src/App.jsx` (useEffect hook)**
+
+```javascript
+useEffect(() => {
+  if (user) {
+    fetchItems();
+  }
+}, [user]);
+```
+
+When you land on the dashboard, React automatically calls `fetchItems()`
+
+**Step 2: Frontend Requests Data**
+**File: `frontend/src/App.jsx` (fetchItems function)**
+
+```javascript
+const fetchItems = async () => {
+  setItemsLoading(true);
+  const response = await fetch(`${API_URL}/api/items`, {
+    credentials: 'include',
+  });
+  const data = await response.json();
+  setItems(data);
+  setItemsLoading(false);
+};
+```
+
+The frontend asks the backend: "Give me all items"
+
+**Step 3: Backend Verifies Session**
+**File: `backend/server.js` (GET /api/items route)**
+
+```javascript
+app.get('/api/items', (req, res) => {
+  // Check if user is logged in
+  if (!req.session.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  // Query database
+  const query = 'SELECT * FROM items';
+  // ...
+});
+```
+
+Backend checks your session: "Are you logged in?"
+
+**Step 4: Database Returns Data**
+MySQL executes: `SELECT * FROM items` and returns all rows
+
+**Step 5: Backend Sends Response**
+Backend sends the items array back to the frontend as JSON
+
+**Step 6: Frontend Displays Data**
+**File: `frontend/src/components/InventoryTable.jsx`**
+
+```javascript
+<tbody>
+  {items.map((item) => (
+    <tr key={item.id}>
+      <td>{item.id}</td>
+      <td>{item.item_name}</td>
+      <td>{item.category}</td>
+      <td>{item.stock_qty}</td>
+      <td>PHP {Number(item.unit_price).toFixed(2)}</td>
+    </tr>
+  ))}
+</tbody>
+```
+
+React displays the data in a nice table
+
+---
+
+## How Adding/Editing Items Works (Admin Only)
+
+### Adding a New Item:
+
+**Step 1: Fill Out the Form**
+**File: `frontend/src/components/ItemForm.jsx`**
+
+```javascript
+const handleSubmit = async (event) => {
+  event.preventDefault();
+  await onSubmit({
+    ...values,
+    stock_qty: Number(values.stock_qty),
+    unit_price: Number(values.unit_price),
+  });
+};
+```
+
+- You (as admin) fill out the form: item name, category, stock, price
+- You click "Save item"
+- Form converts numbers and calls the `onSubmit` function
+
+**Step 2: Frontend Sends POST Request**
+**File: `frontend/src/App.jsx` (handleCreate function)**
+
+```javascript
+const handleCreate = async (payload) => {
+  setMutating(true);
+  const response = await fetch(`${API_URL}/api/items`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Unable to add item');
+  }
+  
+  await fetchItems(); // Refresh the list
+  setMutating(false);
+};
+```
+
+Frontend sends this data to `POST /api/items`
+
+**Step 3: Backend Validates**
+**File: `backend/server.js` (POST /api/items route)**
+
+```javascript
+app.post('/api/items', (req, res) => {
+  // Check if logged in
+  if (!req.session.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  // Check if admin
+  if (req.session.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  
+  const { item_name, category, stock_qty, unit_price } = req.body;
+  
+  // Insert into database
+  const query = 'INSERT INTO items (item_name, category, stock_qty, unit_price) VALUES (?, ?, ?, ?)';
+  // ...
+});
+```
+
+Backend checks:
+- Are you logged in? ✓
+- Are you an admin? ✓
+
+**Step 4: Database Inserts**
+MySQL executes: `INSERT INTO items ...`
+Database saves the item and gives it an auto-generated ID number
+
+**Step 5: Frontend Refreshes**
+The `fetchItems()` function runs again to show the updated list with your new item
+
+---
+
+### Editing an Item:
+
+**Step 1: Click Edit Button**
+**File: `frontend/src/components/InventoryTable.jsx`**
+
+```javascript
+<button 
+  type="button" 
+  className="ghost-button" 
+  onClick={() => onEdit(item)}
+>
+  Edit
+</button>
+```
+
+**File: `frontend/src/App.jsx`**
+
+```javascript
+<InventoryTable 
+  items={items} 
+  canEdit={isAdmin} 
+  onEdit={(item) => setEditingItem(item)} 
+/>
+```
+
+- You click "Edit" on a row
+- The `setEditingItem(item)` stores which item you're editing
+- The form appears and fills with that item's current data
+
+**Step 2: Update Form**
+**File: `frontend/src/components/ItemForm.jsx`**
+
+```javascript
+useEffect(() => {
+  setValues(initialValues);
+}, [initialValues]);
+```
+
+When `editingItem` changes, the form automatically updates with that item's data
+
+**Step 3: Submit Changes**
+**File: `frontend/src/App.jsx` (handleUpdate function)**
+
+```javascript
+const handleUpdate = async (payload) => {
+  if (!editingItem) return;
+  
+  setMutating(true);
+  const response = await fetch(`${API_URL}/api/items/${editingItem.id}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  
+  if (response.status === 404) {
+    throw new Error('Item not found');
+  }
+  
+  setEditingItem(null); // Close the edit form
+  await fetchItems(); // Refresh the list
+  setMutating(false);
+};
+```
+
+- You change something (like the price)
+- You click "Update item"
+- Frontend sends: `PUT /api/items/5` (if editing item #5)
+
+**Step 4: Backend Updates Database**
+**File: `backend/server.js` (PUT /api/items/:id route)**
+
+```javascript
+app.put('/api/items/:id', (req, res) => {
+  // Check permissions
+  if (!req.session.user || req.session.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  
+  const itemId = req.params.id;
+  const { item_name, category, stock_qty, unit_price } = req.body;
+  
+  // Update in database
+  const query = 'UPDATE items SET item_name = ?, category = ?, stock_qty = ?, unit_price = ? WHERE id = ?';
+  // ...
+});
+```
+
+Backend checks permissions again, then tells MySQL: `UPDATE items SET ... WHERE id = ?`
+
+**Step 5: Frontend Shows Updated Data**
+The list refreshes automatically to show your changes
+
+---
+
+## Security Features
+
+### What Keeps This Safe:
+- **Sessions:** You're only logged in for a limited time
+- **Role checking:** Backend verifies you're an admin before allowing changes
+- **Credentials:** Every request includes your session cookie to prove it's you
+- **HTTPS:** (In production) Encrypts all data traveling between browser and server
+
+---
+
+## The Flow Diagram
+
+```
+[Browser/Frontend] 
+       ↕ (HTTP requests with session cookies)
+[Backend Server]
+       ↕ (SQL queries)
+[MySQL Database]
+```
+
+Every action follows this pattern:
+1. You do something in the browser
+2. Frontend sends a request to the backend
+3. Backend checks your permissions
+4. Backend talks to the database
+5. Database responds
+6. Backend sends data back to frontend
+7. Frontend updates what you see
+
+---
+
+## Common Terms Explained
+
+- **API** - A way for the frontend and backend to talk to each other
+- **Route/Endpoint** - A specific URL the frontend can call (like /api/items)
+- **GET request** - Asking for data
+- **POST request** - Sending new data to create something
+- **PUT request** - Sending data to update something
+- **Session** - Temporary record that you're logged in
+- **Cookie** - Small data stored in your browser to remember your session
+- **Credentials** - Your username and password
+- **Authentication** - Proving who you are (logging in)
+- **Authorization** - Checking what you're allowed to do (admin vs regular user)
+
+---
+
+## What Happens When You...
+
+### Refresh the page?
+- Your browser still has the session cookie
+- Frontend asks backend: "Am I still logged in?"
+- Backend checks the session and says "Yes, you're still user X"
+- You stay logged in
+
+### Log out?
+- Frontend tells backend: "End my session"
+- Backend deletes your session from its memory
+- Your cookie becomes invalid
+- You're sent back to the login page
+
+### Close the browser?
+- Depends on session settings
+- Usually sessions last 24 hours or until you explicitly log out
+- When you come back, frontend checks if session is still valid
+
+---
+
+## File Structure & Locations
+
+### Frontend Files (React)
+Located in: `frontend/src/`
+
+- **App.jsx** (`frontend/src/App.jsx`)
+  - Main component that controls everything
+  - Handles routing (which page to show)
+  - Manages user state (who's logged in)
+  - Contains all the main logic
+
+- **LoginForm.jsx** (`frontend/src/components/LoginForm.jsx`)
+  - The login page with username/password fields
+  - Handles form submission
+
+- **InventoryTable.jsx** (`frontend/src/components/InventoryTable.jsx`)
+  - Displays all items in a table format
+  - Shows Edit button for admins
+
+- **ItemForm.jsx** (`frontend/src/components/ItemForm.jsx`)
+  - Form to add new items or edit existing ones
+  - Used by admins only
+
+- **App.css** (`frontend/src/App.css`)
+  - Styles/appearance for the app (if not using Tailwind)
+
+### Backend Files (Node.js)
+Located in: `backend/` or `server/`
+
+- **server.js** or **index.js** (`backend/server.js`)
+  - Main server file
+  - Sets up Express.js
+  - Defines all API routes
+  - Connects to MySQL database
+  - Handles sessions and authentication
+
+- **routes/** folder (if separated)
+  - `backend/routes/auth.js` - Login/logout routes
+  - `backend/routes/items.js` - Item CRUD operations
+
+- **config/** folder (optional)
+  - `backend/config/database.js` - Database connection settings
+
+- **.env** file (`backend/.env`)
+  - Contains sensitive information:
+    - Database username and password
+    - Database host and name
+    - Session secret key
+  - **NEVER share this file or commit to GitHub!**
+
+### Database (MySQL)
+Not a file on your computer, but accessible through:
+- **MySQL Workbench** (GUI tool)
+- **phpMyAdmin** (web-based)
+- **Command line:** `mysql -u root -p`
+
+Database structure:
+- Database name: Usually `inventory_db` or similar
+- Tables:
+  - `users` - Stores login credentials
+  - `items` - Stores inventory data
+
+### Configuration Files
+
+- **package.json** (`frontend/package.json` and `backend/package.json`)
+  - Lists all the libraries/dependencies used
+  - Contains scripts to run the app
+
+- **.gitignore** (root directory)
+  - Lists files that shouldn't be uploaded to GitHub
+  - Should include: node_modules/, .env
+
+### Full Project Structure Example:
+```
+inventory-project/
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx              ← Main React component
+│   │   ├── App.css              ← Styles
+│   │   └── components/
+│   │       ├── LoginForm.jsx    ← Login page
+│   │       ├── InventoryTable.jsx ← Item table
+│   │       └── ItemForm.jsx     ← Add/Edit form
+│   ├── public/
+│   ├── package.json
+│   └── vite.config.js (or similar)
+│
+├── backend/
+│   ├── server.js                ← Main server file
+│   ├── routes/                  ← API routes (optional)
+│   │   ├── auth.js
+│   │   └── items.js
+│   ├── config/                  ← Configuration (optional)
+│   │   └── database.js
+│   ├── .env                     ← Secret credentials (DON'T SHARE!)
+│   └── package.json
+│
+└── README.md                    ← Project documentation
+```
+
+---
+
+## In Simple Terms
+
+Think of this system like a restaurant:
+
+- **Frontend** = The waiter (takes your order, brings you food)
+- **Backend** = The kitchen manager (checks if orders are valid, coordinates everything)
+- **Database** = The pantry (stores all the ingredients/data)
+
+When you order food (make a request):
+1. You tell the waiter what you want (click a button)
+2. Waiter takes order to kitchen manager (frontend → backend)
+3. Kitchen manager checks pantry for ingredients (backend → database)
+4. Pantry provides ingredients (database → backend)
+5. Kitchen manager prepares food (backend processes data)
+6. Waiter brings you the food (backend → frontend)
+7. You enjoy your meal (see the updated screen)
+
+---
+
+## Tips for Understanding
+
+- **Frontend = What users see and interact with**
+- **Backend = The logic and rules enforcer**
+- **Database = Where everything is permanently stored**
+- **Session = Proof that you're logged in**
+- **Admin = Special user who can change things**
+- **Regular user = Can only view, not edit**
+
+The key thing to remember: The frontend never directly touches the database. It always goes through the backend first. This keeps everything secure and organized!
