@@ -20,10 +20,6 @@ function LoginForm({ onSubmit, loading, error }) {
 
   return (
     <form className="flex flex-col gap-2.5" onSubmit={handleSubmit}>
-      <h2 className="text-2xl my-2 mt-0">Sign in</h2>
-      <p className="mt-1 mb-0 text-gray-500 text-[0.95rem]">
-        Use the credentials stored in the MySQL users table.
-      </p>
       <label htmlFor="username" className="font-semibold text-[0.95rem]">
         Username
       </label>

@@ -271,14 +271,7 @@ function App() {
   return (
     <div className="max-w-[1100px] mx-auto pt-12 px-6 pb-20 flex flex-col gap-8">
       <header className="flex items-start justify-between gap-4 flex-col sm:flex-row">
-        <div>
-          <p className="uppercase tracking-widest text-gray-500 text-[0.85rem] m-0">
-            IT Elective 3 · Final Project
-          </p>
-          <h1 className="my-2 mt-2 mb-1 text-[2rem]">
-            Inventory Access Portal
-          </h1>
-        </div>
+        <div></div>
         {user && (
           <button
             type="button"
